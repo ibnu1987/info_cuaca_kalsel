@@ -4,3 +4,6 @@ netCDF4
 numpy
 matplotlib
 cartopy
+pandas
+folium
+streamlit-folium
