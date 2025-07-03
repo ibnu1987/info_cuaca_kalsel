@@ -8,7 +8,7 @@ import cartopy.feature as cfeature
 import pandas as pd
 from datetime import datetime
 
-matplotlib.use("Agg")
+matplotlib.use("Agg")  # Untuk kompatibilitas Streamlit
 
 # Konfigurasi halaman
 st.set_page_config(page_title="Prakiraan Cuaca Kalimantan Selatan", layout="wide")
@@ -46,7 +46,7 @@ if st.sidebar.button("🔎 Tampilkan Visualisasi"):
         st.error(f"❌ Gagal memuat data: {e}")
         st.stop()
 
-    # Koordinat Kalsel
+    # Wilayah Kalimantan Selatan
     lat_min, lat_max = -4.5, -1.5
     lon_min, lon_max = 114.5, 116.5
 
@@ -83,16 +83,14 @@ if st.sidebar.button("🔎 Tampilkan Visualisasi"):
         st.warning("Parameter tidak dikenali.")
         st.stop()
 
-    # Subsetting wilayah
-    var = var.sel(lat=slice(lat_max, lat_min), lon=slice(lon_min, lon_max))
+    # Potong wilayah dan pastikan urutan dimensi lat-lon
+    var = var.sel(lat=slice(lat_max, lat_min), lon=slice(lon_min, lon_max)).transpose("lat", "lon")
     if is_vector:
-        u = u.sel(lat=slice(lat_max, lat_min), lon=slice(lon_min, lon_max))
-        v = v.sel(lat=slice(lat_max, lat_min), lon=slice(lon_min, lon_max))
+        u = u.sel(lat=slice(lat_max, lat_min), lon=slice(lon_min, lon_max)).transpose("lat", "lon")
+        v = v.sel(lat=slice(lat_max, lat_min), lon=slice(lon_min, lon_max)).transpose("lat", "lon")
 
-    # Pastikan array dimensi benar
-    lats = var.lat.values
-    lons = var.lon.values
-    lon2d, lat2d = np.meshgrid(lons, lats)
+    # Meshgrid
+    lon2d, lat2d = np.meshgrid(var.lon.values, var.lat.values)
 
     # Plot
     fig = plt.figure(figsize=(10, 6))
