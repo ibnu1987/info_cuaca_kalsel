@@ -84,9 +84,10 @@ if st.sidebar.button("🔎 Tampilkan Visualisasi"):
         u = u.sel(lat=slice(-4, -1), lon=slice(114, 116.5))
         v = v.sel(lat=slice(-4, -1), lon=slice(114, 116.5))
 
-    # Buat plot dengan Cartopy
-    fig = plt.figure(figsize=(10, 6))
-    fig.subplots_adjust(top=0.9)  # Atur jarak atas agar judul dekat peta
+    # Ukuran gambar
+    fig_width, fig_height = 10, 6
+    fig = plt.figure(figsize=(fig_width, fig_height))
+    fig.subplots_adjust(top=0.88)
     ax = plt.axes(projection=ccrs.PlateCarree())
     ax.set_extent([114, 116.5, -4, -1], crs=ccrs.PlateCarree())
 
@@ -96,9 +97,12 @@ if st.sidebar.button("🔎 Tampilkan Visualisasi"):
     valid_str = valid_dt.strftime("%HUTC %a %d %b %Y")
     tstr = f"t+{forecast_hour:03d}"
 
+    # Ukuran huruf dinamis berdasarkan lebar figure
+    font_size = max(10, int(fig_width * 1.2))  # contoh: 10–16 tergantung lebar peta
+
     # Judul tengah atas
     judul_peta = f"{label} Valid {valid_str} — GFS {tstr}"
-    ax.set_title(judul_peta, fontsize=12, fontweight="bold", loc="center", pad=10)
+    ax.set_title(judul_peta, fontsize=font_size, fontweight="bold", loc="center", pad=10)
 
     # Plot data
     if is_contour:
