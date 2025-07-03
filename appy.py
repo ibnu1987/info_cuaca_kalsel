@@ -14,7 +14,7 @@ st.title("📡 Global Forecast System Viewer (Realtime via NOMADS)")
 st.header("Web Hasil Pembelajaran Pengelolaan Informasi Meteorologi")
 st.markdown("### **_Editor : Ibnu Hidayat (M8TB_14.24.0005)_**")
 
-# Fungsi untuk memuat dataset dengan cache
+# Fungsi untuk memuat dataset
 @st.cache_data
 def load_dataset(run_date, run_hour):
     base_url = f"https://nomads.ncep.noaa.gov/dods/gfs_0p25_1hr/gfs{run_date}/gfs_0p25_1hr_{run_hour}z"
@@ -34,7 +34,7 @@ parameter = st.sidebar.selectbox("Parameter", [
     "Tekanan Permukaan Laut (prmslmsl)"
 ])
 
-# Tombol untuk visualisasi
+# Tombol visualisasi
 if st.sidebar.button("🔎 Tampilkan Visualisasi"):
     try:
         with st.spinner("Mengunduh dan memuat data dari server GFS..."):
@@ -61,7 +61,7 @@ if st.sidebar.button("🔎 Tampilkan Visualisasi"):
     elif "ugrd10m" in parameter:
         u = ds["ugrd10m"][forecast_hour, :, :]
         v = ds["vgrd10m"][forecast_hour, :, :]
-        speed = (u**2 + v**2)**0.5 * 1.94384  # konversi ke knot
+        speed = (u**2 + v**2)**0.5 * 1.94384
         var = speed
         label = "Kecepatan Angin (knot)"
         cmap = plt.cm.get_cmap("RdYlGn_r", 10)
@@ -77,34 +77,33 @@ if st.sidebar.button("🔎 Tampilkan Visualisasi"):
         st.warning("Parameter tidak dikenali.")
         st.stop()
 
-    # Area yang diubah sesuai permintaan (lat: -4.5 hingga -1, lon: 114 hingga 117)
-    var = var.sel(lat=slice(-4.5, -1), lon=slice(114, 117))
-
+    # Area peta: Kalimantan Selatan (lat -4.5 s.d -1, lon 114 s.d 117)
+    lat_min, lat_max = -4.5, -1
+    lon_min, lon_max = 114, 117
+    var = var.sel(lat=slice(lat_min, lat_max), lon=slice(lon_min, lon_max))
     if is_vector:
-        u = u.sel(lat=slice(-4.5, -1), lon=slice(114, 117))
-        v = v.sel(lat=slice(-4.5, -1), lon=slice(114, 117))
+        u = u.sel(lat=slice(lat_min, lat_max), lon=slice(lon_min, lon_max))
+        v = v.sel(lat=slice(lat_min, lat_max), lon=slice(lon_min, lon_max))
 
-    # Ukuran gambar
+    # Ukuran plot
     fig_width, fig_height = 10, 6
     fig = plt.figure(figsize=(fig_width, fig_height))
     fig.subplots_adjust(top=0.9)
     ax = plt.axes(projection=ccrs.PlateCarree())
-    ax.set_extent([114, 117, -4.5, -1], crs=ccrs.PlateCarree())
+    ax.set_extent([lon_min, lon_max, lat_min, lat_max], crs=ccrs.PlateCarree())
 
-    # Format waktu validasi
+    # Waktu validasi
     valid_time = ds.time[forecast_hour].values
     valid_dt = pd.to_datetime(str(valid_time))
     valid_str = valid_dt.strftime("%HUTC %a %d %b %Y")
     tstr = f"t+{forecast_hour:03d}"
 
-    # Ukuran huruf judul dinamis
+    # Judul peta
     font_size = max(10, int(fig_width * 1.2))
-
-    # Judul tengah atas
     judul_peta = f"{label} Valid {valid_str} — GFS {tstr}"
     ax.set_title(judul_peta, fontsize=font_size, fontweight="bold", loc="center", pad=10)
 
-    # Plot data
+    # Plot data utama
     if is_contour:
         cs = ax.contour(var.lon, var.lat, var.values, levels=15, colors='black',
                         linewidths=0.8, transform=ccrs.PlateCarree())
@@ -121,10 +120,28 @@ if st.sidebar.button("🔎 Tampilkan Visualisasi"):
                       u.values[::5, ::5], v.values[::5, ::5],
                       transform=ccrs.PlateCarree(), scale=700, width=0.002, color='black')
 
-    # Tambah fitur peta
+    # Tambahkan fitur peta
     ax.coastlines(resolution='10m', linewidth=0.8)
     ax.add_feature(cfeature.BORDERS, linestyle=':')
     ax.add_feature(cfeature.LAND, facecolor='lightgray')
 
-    # Tampilkan ke Streamlit
+    # Tambahkan titik lokasi kabupaten/kota
+    kota_lokasi = pd.DataFrame({
+        "kota": [
+            "Banjarmasin", "Banjarbaru", "Martapura", "Pelaihari", "Kandangan",
+            "Barabai", "Tanjung", "Paringin", "Marabahan", "Rantau"
+        ],
+        "lat": [-3.319, -3.442, -3.410, -3.804, -2.716,
+                -2.583, -2.130, -2.590, -2.988, -2.918],
+        "lon": [114.590, 114.843, 114.904, 114.761, 115.176,
+                115.385, 115.435, 115.518, 114.733, 115.149]
+    })
+
+    for _, row in kota_lokasi.iterrows():
+        ax.plot(row['lon'], row['lat'], marker='o', color='red', markersize=4,
+                transform=ccrs.PlateCarree())
+        ax.text(row['lon'] + 0.02, row['lat'] + 0.02, row['kota'], fontsize=7,
+                transform=ccrs.PlateCarree(), ha='left', va='bottom', color='black')
+
+    # Tampilkan di Streamlit
     st.pyplot(fig)
