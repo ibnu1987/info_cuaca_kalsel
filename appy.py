@@ -8,53 +8,52 @@ import cartopy.feature as cfeature
 import pandas as pd
 from datetime import datetime
 
-matplotlib.use("Agg")  # Untuk backend non-GUI agar kompatibel dengan Streamlit
+matplotlib.use("Agg")
 
 # Konfigurasi halaman
 st.set_page_config(page_title="Prakiraan Cuaca Kalimantan Selatan", layout="wide")
-st.title("📡 Global Forecast System Viewer (Wilayah Kalimantan Selatan)")
-st.header("Web Hasil Pembelajaran Pengelolaan Informasi Meteorologi")
-st.markdown("### **_Editor : Ibnu Hidayat (M8TB_14.24.0005)_**")
+st.title("📡 GFS Viewer - Kalimantan Selatan")
+st.header("Pengelolaan Informasi Meteorologi")
+st.markdown("### **_Editor: Ibnu Hidayat (M8TB_14.24.0005)_**")
 
-# Fungsi cache untuk load dataset
 @st.cache_data
 def load_dataset(run_date, run_hour):
-    base_url = f"https://nomads.ncep.noaa.gov/dods/gfs_0p25_1hr/gfs{run_date}/gfs_0p25_1hr_{run_hour}z"
-    ds = xr.open_dataset(base_url)
+    url = f"https://nomads.ncep.noaa.gov/dods/gfs_0p25_1hr/gfs{run_date}/gfs_0p25_1hr_{run_hour}z"
+    ds = xr.open_dataset(url)
     return ds
 
-# Sidebar pengaturan
+# Sidebar
 st.sidebar.title("⚙️ Pengaturan")
 today = datetime.utcnow()
-run_date = st.sidebar.date_input("Tanggal Run GFS (UTC)", today.date())
-run_hour = st.sidebar.selectbox("Jam Run GFS (UTC)", ["00", "06", "12", "18"])
-forecast_hour = st.sidebar.slider("Jam ke depan", 0, 240, 0, step=1)
-param_options = {
-    "pratesfc": "Curah Hujan per jam (pratesfc)",
-    "tmp2m": "Suhu Permukaan (tmp2m)",
-    "ugrd10m_vgrd10m": "Angin Permukaan (ugrd10m & vgrd10m)",
-    "prmslmsl": "Tekanan Permukaan Laut (prmslmsl)"
-}
-parameter_key = st.sidebar.selectbox("Parameter", options=list(param_options.keys()),
-                                     format_func=lambda x: param_options[x])
+run_date = st.sidebar.date_input("Tanggal Run (UTC)", today.date())
+run_hour = st.sidebar.selectbox("Jam Run (UTC)", ["00", "06", "12", "18"])
+forecast_hour = st.sidebar.slider("Prakiraan Jam ke-", 0, 240, 0, 1)
+parameter_key = st.sidebar.selectbox("Parameter", [
+    "pratesfc", "tmp2m", "ugrd10m_vgrd10m", "prmslmsl"
+], format_func=lambda x: {
+    "pratesfc": "Curah Hujan (mm/jam)",
+    "tmp2m": "Suhu (°C)",
+    "ugrd10m_vgrd10m": "Angin 10m (knot)",
+    "prmslmsl": "Tekanan Permukaan Laut (hPa)"
+}[x])
 
 if st.sidebar.button("🔎 Tampilkan Visualisasi"):
     try:
-        with st.spinner("Mengunduh dan memuat data dari server GFS..."):
+        with st.spinner("📥 Mengunduh data dari server GFS..."):
             ds = load_dataset(run_date.strftime("%Y%m%d"), run_hour)
-        st.success("Dataset berhasil dimuat.")
+        st.success("✅ Data berhasil dimuat")
     except Exception as e:
-        st.error(f"Gagal memuat data: {e}")
+        st.error(f"❌ Gagal memuat data: {e}")
         st.stop()
 
-    is_contour = False
-    is_vector = False
-
-    # Area Kalimantan Selatan
+    # Koordinat Kalsel
     lat_min, lat_max = -4.5, -1.5
     lon_min, lon_max = 114.5, 116.5
 
-    # Ambil parameter
+    is_vector = False
+    is_contour = False
+
+    # Parameter
     if parameter_key == "pratesfc":
         var = ds["pratesfc"][forecast_hour, :, :] * 3600
         label = "Curah Hujan (mm/jam)"
@@ -71,9 +70,9 @@ if st.sidebar.button("🔎 Tampilkan Visualisasi"):
         speed = (u**2 + v**2)**0.5 * 1.94384
         var = speed
         label = "Kecepatan Angin (knot)"
-        cmap = plt.cm.get_cmap("RdYlGn_r", 10)
-        is_vector = True
+        cmap = "viridis"
         vmin, vmax = 0, 40
+        is_vector = True
     elif parameter_key == "prmslmsl":
         var = ds["prmslmsl"][forecast_hour, :, :] / 100
         label = "Tekanan Permukaan Laut (hPa)"
@@ -84,34 +83,32 @@ if st.sidebar.button("🔎 Tampilkan Visualisasi"):
         st.warning("Parameter tidak dikenali.")
         st.stop()
 
-    # Potong wilayah
+    # Subsetting wilayah
     var = var.sel(lat=slice(lat_max, lat_min), lon=slice(lon_min, lon_max))
     if is_vector:
         u = u.sel(lat=slice(lat_max, lat_min), lon=slice(lon_min, lon_max))
         v = v.sel(lat=slice(lat_max, lat_min), lon=slice(lon_min, lon_max))
 
-    # Buat peta
+    # Pastikan array dimensi benar
+    lats = var.lat.values
+    lons = var.lon.values
+    lon2d, lat2d = np.meshgrid(lons, lats)
+
+    # Plot
     fig = plt.figure(figsize=(10, 6))
     ax = plt.axes(projection=ccrs.PlateCarree())
-    ax.set_extent([lon_min, lon_max, lat_min, lat_max], crs=ccrs.PlateCarree())
+    ax.set_extent([lon_min, lon_max, lat_min, lat_max])
 
-    valid_time = ds.time[forecast_hour].values
-    valid_dt = pd.to_datetime(valid_time)
-    valid_str = valid_dt.strftime("%HUTC %a %d %b %Y")
-    tstr = f"t+{forecast_hour:03d}"
-
-    ax.set_title(f"{label} Valid {valid_str}", loc="left", fontsize=10, fontweight="bold")
-    ax.set_title(f"GFS {tstr}", loc="right", fontsize=10, fontweight="bold")
+    time_str = pd.to_datetime(ds.time[forecast_hour].values).strftime("%HUTC %a %d %b %Y")
+    ax.set_title(f"{label} | Valid {time_str}", loc="left", fontsize=10, weight="bold")
+    ax.set_title(f"GFS t+{forecast_hour:03d}", loc="right", fontsize=10, weight="bold")
 
     if is_contour:
-        cs = ax.contour(var.lon, var.lat, var.values, levels=15, colors='black', linewidths=0.8, transform=ccrs.PlateCarree())
-        ax.clabel(cs, fmt="%d", colors='black', fontsize=8)
+        cs = ax.contour(lon2d, lat2d, var.values, levels=15, colors='black', linewidths=0.7)
+        ax.clabel(cs, fmt="%d", fontsize=8)
     else:
-        lon2d, lat2d = np.meshgrid(var.lon.values, var.lat.values)
-        im = ax.pcolormesh(lon2d, lat2d, var.values,
-                           cmap=cmap, vmin=vmin, vmax=vmax,
-                           transform=ccrs.PlateCarree(),
-                           shading="auto")
+        im = ax.pcolormesh(lon2d, lat2d, var.values, cmap=cmap,
+                           vmin=vmin, vmax=vmax, shading="auto", transform=ccrs.PlateCarree())
         cbar = plt.colorbar(im, ax=ax, orientation='vertical', pad=0.02)
         cbar.set_label(label)
 
@@ -119,33 +116,29 @@ if st.sidebar.button("🔎 Tampilkan Visualisasi"):
             step = 5
             ax.quiver(lon2d[::step, ::step], lat2d[::step, ::step],
                       u.values[::step, ::step], v.values[::step, ::step],
-                      transform=ccrs.PlateCarree(), scale=700, width=0.002, color='black')
+                      transform=ccrs.PlateCarree(), color='black', scale=700)
 
-    ax.coastlines(resolution='10m', linewidth=0.8)
+    ax.coastlines(resolution='10m', linewidth=0.7)
     ax.add_feature(cfeature.BORDERS, linestyle=':')
     ax.add_feature(cfeature.LAND, facecolor='lightgray')
 
-    # Lokasi kabupaten/kota Kalimantan Selatan
+    # Titik Kabupaten/Kota
     locations = {
-        "Banjarmasin": (-3.3204, 114.5908),
-        "Banjarbaru": (-3.442, 114.844),
-        "Kab. Banjar": (-3.453, 115.017),
-        "Kab. Barito Kuala": (-2.916, 114.716),
-        "Kab. Tapin": (-2.944, 115.045),
-        "Kab. Hulu Sungai Selatan": (-2.773, 115.225),
-        "Kab. Hulu Sungai Tengah": (-2.578, 115.520),
-        "Kab. Hulu Sungai Utara": (-2.432, 115.147),
-        "Kab. Balangan": (-2.343, 115.615),
-        "Kab. Tabalong": (-1.864, 115.516),
-        "Kab. Tanah Laut": (-3.804, 114.781),
-        "Kab. Tanah Bumbu": (-3.458, 115.525),
-        "Kab. Kotabaru": (-3.295, 116.230)
+        "Banjarmasin": (-3.32, 114.59),
+        "Banjarbaru": (-3.44, 114.84),
+        "Kab. Banjar": (-3.45, 115.01),
+        "Kab. Tapin": (-2.94, 115.04),
+        "Kab. HSS": (-2.77, 115.22),
+        "Kab. HST": (-2.57, 115.52),
+        "Kab. HSU": (-2.43, 115.14),
+        "Kab. Balangan": (-2.34, 115.61),
+        "Kab. Tabalong": (-1.86, 115.51),
+        "Kab. Tala": (-3.80, 114.78),
+        "Kab. Tanbu": (-3.45, 115.52),
+        "Kab. Kotabaru": (-3.29, 116.23)
     }
-
     for name, (lat, lon) in locations.items():
-        ax.plot(lon, lat, marker='o', color='red', markersize=3, transform=ccrs.PlateCarree())
+        ax.plot(lon, lat, 'ro', markersize=3, transform=ccrs.PlateCarree())
         ax.text(lon + 0.05, lat + 0.05, name, fontsize=6, transform=ccrs.PlateCarree())
 
     st.pyplot(fig)
-    st.markdown("---")
-    st.markdown("*Data dari [NCEP/NOMADS](https://nomads.ncep.noaa.gov/), GFS 0.25° 1-hourly forecast*")
