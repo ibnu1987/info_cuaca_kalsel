@@ -86,6 +86,7 @@ if st.sidebar.button("🔎 Tampilkan Visualisasi"):
 
     # Buat plot dengan Cartopy
     fig = plt.figure(figsize=(10, 6))
+    fig.subplots_adjust(top=0.88)  # Sesuaikan batas atas agar tidak terlalu tinggi
     ax = plt.axes(projection=ccrs.PlateCarree())
     ax.set_extent([114, 116.5, -4, -1], crs=ccrs.PlateCarree())
 
@@ -95,11 +96,11 @@ if st.sidebar.button("🔎 Tampilkan Visualisasi"):
     valid_str = valid_dt.strftime("%HUTC %a %d %b %Y")
     tstr = f"t+{forecast_hour:03d}"
 
-    # Judul kiri dan kanan atas (hindari tumpang tindih)
+    # Judul kiri dan kanan atas (spasi lebih rapat)
     title_left = f"{label} Valid {valid_str}"
     title_right = f"GFS {tstr}"
-    fig.text(0.01, 0.95, title_left, ha='left', fontsize=10, fontweight="bold")
-    fig.text(0.99, 0.95, title_right, ha='right', fontsize=10, fontweight="bold")
+    fig.text(0.01, 0.91, title_left, ha='left', fontsize=10, fontweight="bold")
+    fig.text(0.99, 0.91, title_right, ha='right', fontsize=10, fontweight="bold")
 
     # Plot data
     if is_contour:
