@@ -14,7 +14,7 @@ st.title("📡 Global Forecast System Viewer (Realtime via NOMADS)")
 st.header("Web Hasil Pembelajaran Pengelolaan Informasi Meteorologi")
 st.markdown("### **_Editor : Ibnu Hidayat (M8TB_14.24.0005)_**")
 
-# Fungsi untuk memuat dataset
+# Fungsi untuk memuat dataset dengan cache
 @st.cache_data
 def load_dataset(run_date, run_hour):
     base_url = f"https://nomads.ncep.noaa.gov/dods/gfs_0p25_1hr/gfs{run_date}/gfs_0p25_1hr_{run_hour}z"
@@ -34,7 +34,7 @@ parameter = st.sidebar.selectbox("Parameter", [
     "Tekanan Permukaan Laut (prmslmsl)"
 ])
 
-# Tombol visualisasi
+# Tombol untuk visualisasi
 if st.sidebar.button("🔎 Tampilkan Visualisasi"):
     try:
         with st.spinner("Mengunduh dan memuat data dari server GFS..."):
@@ -61,7 +61,7 @@ if st.sidebar.button("🔎 Tampilkan Visualisasi"):
     elif "ugrd10m" in parameter:
         u = ds["ugrd10m"][forecast_hour, :, :]
         v = ds["vgrd10m"][forecast_hour, :, :]
-        speed = (u**2 + v**2)**0.5 * 1.94384
+        speed = (u**2 + v**2)**0.5 * 1.94384  # konversi ke knot
         var = speed
         label = "Kecepatan Angin (knot)"
         cmap = plt.cm.get_cmap("RdYlGn_r", 10)
@@ -77,30 +77,28 @@ if st.sidebar.button("🔎 Tampilkan Visualisasi"):
         st.warning("Parameter tidak dikenali.")
         st.stop()
 
-    # Filter wilayah: Kalimantan Selatan
+    # Filter wilayah Indonesia (contoh: Kalimantan Selatan)
     var = var.sel(lat=slice(-4, -1), lon=slice(114, 116.5))
 
     if is_vector:
         u = u.sel(lat=slice(-4, -1), lon=slice(114, 116.5))
         v = v.sel(lat=slice(-4, -1), lon=slice(114, 116.5))
 
-    # Buat plot
+    # Buat plot dengan Cartopy
     fig = plt.figure(figsize=(10, 6))
-    fig.subplots_adjust(top=0.92)  # Ruang atas dipersempit
+    fig.subplots_adjust(top=0.9)  # Atur jarak atas agar judul dekat peta
     ax = plt.axes(projection=ccrs.PlateCarree())
     ax.set_extent([114, 116.5, -4, -1], crs=ccrs.PlateCarree())
 
-    # Waktu valid
+    # Format waktu validasi
     valid_time = ds.time[forecast_hour].values
     valid_dt = pd.to_datetime(str(valid_time))
     valid_str = valid_dt.strftime("%HUTC %a %d %b %Y")
     tstr = f"t+{forecast_hour:03d}"
 
-    # Judul kiri dan kanan atas (lebih dekat ke peta)
-    title_left = f"{label} Valid {valid_str}"
-    title_right = f"GFS {tstr}"
-    fig.text(0.01, 0.89, title_left, ha='left', fontsize=10, fontweight="bold")
-    fig.text(0.99, 0.89, title_right, ha='right', fontsize=10, fontweight="bold")
+    # Judul tengah atas
+    judul_peta = f"{label} Valid {valid_str} — GFS {tstr}"
+    ax.set_title(judul_peta, fontsize=12, fontweight="bold", loc="center", pad=10)
 
     # Plot data
     if is_contour:
@@ -119,10 +117,10 @@ if st.sidebar.button("🔎 Tampilkan Visualisasi"):
                       u.values[::5, ::5], v.values[::5, ::5],
                       transform=ccrs.PlateCarree(), scale=700, width=0.002, color='black')
 
-    # Fitur peta
+    # Tambah fitur peta
     ax.coastlines(resolution='10m', linewidth=0.8)
     ax.add_feature(cfeature.BORDERS, linestyle=':')
     ax.add_feature(cfeature.LAND, facecolor='lightgray')
 
-    # Tampilkan di Streamlit
+    # Tampilkan ke Streamlit
     st.pyplot(fig)
