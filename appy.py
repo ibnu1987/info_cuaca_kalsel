@@ -95,14 +95,16 @@ if st.sidebar.button("🔎 Tampilkan Visualisasi"):
     valid_str = valid_dt.strftime("%HUTC %a %d %b %Y")
     tstr = f"t+{forecast_hour:03d}"
 
+    # Judul kiri dan kanan atas (hindari tumpang tindih)
     title_left = f"{label} Valid {valid_str}"
     title_right = f"GFS {tstr}"
+    fig.text(0.01, 0.95, title_left, ha='left', fontsize=10, fontweight="bold")
+    fig.text(0.99, 0.95, title_right, ha='right', fontsize=10, fontweight="bold")
 
-    ax.set_title(title_left, loc="left", fontsize=10, fontweight="bold")
-    ax.set_title(title_right, loc="right", fontsize=10, fontweight="bold")
-
+    # Plot data
     if is_contour:
-        cs = ax.contour(var.lon, var.lat, var.values, levels=15, colors='black', linewidths=0.8, transform=ccrs.PlateCarree())
+        cs = ax.contour(var.lon, var.lat, var.values, levels=15, colors='black',
+                        linewidths=0.8, transform=ccrs.PlateCarree())
         ax.clabel(cs, fmt="%d", colors='black', fontsize=8)
     else:
         im = ax.pcolormesh(var.lon, var.lat, var.values,
@@ -110,6 +112,7 @@ if st.sidebar.button("🔎 Tampilkan Visualisasi"):
                            transform=ccrs.PlateCarree())
         cbar = plt.colorbar(im, ax=ax, orientation='vertical', pad=0.02)
         cbar.set_label(label)
+
         if is_vector:
             ax.quiver(var.lon[::5], var.lat[::5],
                       u.values[::5, ::5], v.values[::5, ::5],
@@ -120,4 +123,5 @@ if st.sidebar.button("🔎 Tampilkan Visualisasi"):
     ax.add_feature(cfeature.BORDERS, linestyle=':')
     ax.add_feature(cfeature.LAND, facecolor='lightgray')
 
+    # Tampilkan ke Streamlit
     st.pyplot(fig)
