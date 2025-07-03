@@ -77,19 +77,19 @@ if st.sidebar.button("🔎 Tampilkan Visualisasi"):
         st.warning("Parameter tidak dikenali.")
         st.stop()
 
-    # Filter wilayah Indonesia (contoh: Kalimantan Selatan)
-    var = var.sel(lat=slice(-4, -1), lon=slice(114, 116.5))
+    # Area yang diubah sesuai permintaan (lat: -4.5 hingga -1, lon: 114 hingga 117)
+    var = var.sel(lat=slice(-4.5, -1), lon=slice(114, 117))
 
     if is_vector:
-        u = u.sel(lat=slice(-4, -1), lon=slice(114, 116.5))
-        v = v.sel(lat=slice(-4, -1), lon=slice(114, 116.5))
+        u = u.sel(lat=slice(-4.5, -1), lon=slice(114, 117))
+        v = v.sel(lat=slice(-4.5, -1), lon=slice(114, 117))
 
     # Ukuran gambar
     fig_width, fig_height = 10, 6
     fig = plt.figure(figsize=(fig_width, fig_height))
-    fig.subplots_adjust(top=0.88)
+    fig.subplots_adjust(top=0.9)
     ax = plt.axes(projection=ccrs.PlateCarree())
-    ax.set_extent([114, 116.5, -4, -1], crs=ccrs.PlateCarree())
+    ax.set_extent([114, 117, -4.5, -1], crs=ccrs.PlateCarree())
 
     # Format waktu validasi
     valid_time = ds.time[forecast_hour].values
@@ -97,8 +97,8 @@ if st.sidebar.button("🔎 Tampilkan Visualisasi"):
     valid_str = valid_dt.strftime("%HUTC %a %d %b %Y")
     tstr = f"t+{forecast_hour:03d}"
 
-    # Ukuran huruf dinamis berdasarkan lebar figure
-    font_size = max(10, int(fig_width * 1.2))  # contoh: 10–16 tergantung lebar peta
+    # Ukuran huruf judul dinamis
+    font_size = max(10, int(fig_width * 1.2))
 
     # Judul tengah atas
     judul_peta = f"{label} Valid {valid_str} — GFS {tstr}"
