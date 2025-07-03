@@ -12,7 +12,7 @@ st.title("📡 GFS Viewer Area Bandara Soetta (Realtime via NOMADS)")
 st.header("Web Hasil Pembelajaran Pengelolaan Informasi Meteorologi")
 
 # Identitas mahasiswa
-st.markdown("**HANI GUNAWAN**  \n*UAS PIM M8TB 2025*")
+st.markdown("**IBNU HIDAYAT**  \n*UAS PIM M8TB 2025*")
 
 @st.cache_data
 def load_dataset(run_date, run_hour):
