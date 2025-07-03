@@ -1,5 +1,6 @@
 import streamlit as st
 import xarray as xr
+import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
 import cartopy.crs as ccrs
@@ -7,7 +8,7 @@ import cartopy.feature as cfeature
 import pandas as pd
 from datetime import datetime
 
-matplotlib.use("Agg")  # Backend non-GUI untuk Streamlit
+matplotlib.use("Agg")  # Untuk backend non-GUI agar kompatibel dengan Streamlit
 
 # Konfigurasi halaman
 st.set_page_config(page_title="Prakiraan Cuaca Kalimantan Selatan", layout="wide")
@@ -49,10 +50,11 @@ if st.sidebar.button("🔎 Tampilkan Visualisasi"):
     is_contour = False
     is_vector = False
 
-    # Subsetting Kalimantan Selatan
+    # Area Kalimantan Selatan
     lat_min, lat_max = -4.5, -1.5
     lon_min, lon_max = 114.5, 116.5
 
+    # Ambil parameter
     if parameter_key == "pratesfc":
         var = ds["pratesfc"][forecast_hour, :, :] * 3600
         label = "Curah Hujan (mm/jam)"
@@ -66,7 +68,7 @@ if st.sidebar.button("🔎 Tampilkan Visualisasi"):
     elif parameter_key == "ugrd10m_vgrd10m":
         u = ds["ugrd10m"][forecast_hour, :, :]
         v = ds["vgrd10m"][forecast_hour, :, :]
-        speed = (u**2 + v**2)**0.5 * 1.94384  # konversi ke knot
+        speed = (u**2 + v**2)**0.5 * 1.94384
         var = speed
         label = "Kecepatan Angin (knot)"
         cmap = plt.cm.get_cmap("RdYlGn_r", 10)
@@ -82,18 +84,17 @@ if st.sidebar.button("🔎 Tampilkan Visualisasi"):
         st.warning("Parameter tidak dikenali.")
         st.stop()
 
-    # Subset koordinat wilayah
+    # Potong wilayah
     var = var.sel(lat=slice(lat_max, lat_min), lon=slice(lon_min, lon_max))
     if is_vector:
         u = u.sel(lat=slice(lat_max, lat_min), lon=slice(lon_min, lon_max))
         v = v.sel(lat=slice(lat_max, lat_min), lon=slice(lon_min, lon_max))
 
-    # Plot visualisasi
+    # Buat peta
     fig = plt.figure(figsize=(10, 6))
     ax = plt.axes(projection=ccrs.PlateCarree())
     ax.set_extent([lon_min, lon_max, lat_min, lat_max], crs=ccrs.PlateCarree())
 
-    # Format waktu
     valid_time = ds.time[forecast_hour].values
     valid_dt = pd.to_datetime(valid_time)
     valid_str = valid_dt.strftime("%HUTC %a %d %b %Y")
@@ -106,20 +107,25 @@ if st.sidebar.button("🔎 Tampilkan Visualisasi"):
         cs = ax.contour(var.lon, var.lat, var.values, levels=15, colors='black', linewidths=0.8, transform=ccrs.PlateCarree())
         ax.clabel(cs, fmt="%d", colors='black', fontsize=8)
     else:
-        im = ax.pcolormesh(var.lon, var.lat, var.values, cmap=cmap, vmin=vmin, vmax=vmax, transform=ccrs.PlateCarree())
+        lon2d, lat2d = np.meshgrid(var.lon.values, var.lat.values)
+        im = ax.pcolormesh(lon2d, lat2d, var.values,
+                           cmap=cmap, vmin=vmin, vmax=vmax,
+                           transform=ccrs.PlateCarree(),
+                           shading="auto")
         cbar = plt.colorbar(im, ax=ax, orientation='vertical', pad=0.02)
         cbar.set_label(label)
+
         if is_vector:
             step = 5
-            ax.quiver(var.lon[::step], var.lat[::step], u.values[::step, ::step], v.values[::step, ::step],
+            ax.quiver(lon2d[::step, ::step], lat2d[::step, ::step],
+                      u.values[::step, ::step], v.values[::step, ::step],
                       transform=ccrs.PlateCarree(), scale=700, width=0.002, color='black')
 
-    # Tambah fitur peta
     ax.coastlines(resolution='10m', linewidth=0.8)
     ax.add_feature(cfeature.BORDERS, linestyle=':')
     ax.add_feature(cfeature.LAND, facecolor='lightgray')
 
-    # Titik kabupaten/kota Kalimantan Selatan
+    # Lokasi kabupaten/kota Kalimantan Selatan
     locations = {
         "Banjarmasin": (-3.3204, 114.5908),
         "Banjarbaru": (-3.442, 114.844),
