@@ -128,10 +128,10 @@ if st.sidebar.button("🔎 Tampilkan Visualisasi"):
     # Titik koordinat 13 kabupaten/kota di Kalimantan Selatan
     kota_lokasi = pd.DataFrame({
         "kota": [
-            "Banjarmasin", "Banjarbaru", "Martapura (Banjar)", "Marabahan (Barito Kuala)",
-            "Kandangan (HSS)", "Barabai (HST)", "Amuntai (HSU)", "Kotabaru",
-            "Batulicin (Tanah Bumbu)", "Pelaihari (Tanah Laut)", "Tanjung (Tabalong)",
-            "Rantau (Tapin)", "Paringin (Balangan)"
+            "Banjarmasin", "Banjarbaru", "Banjar", "Barito Kuala",
+            "HSS", "HST", "HSU", "Kotabaru",
+            "Tanah Bumbu", "Tanah Laut", "Tabalong",
+            "Tapin", "Balangan"
         ],
         "lat": [
             -3.319, -3.442, -3.410, -2.988,
