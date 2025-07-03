@@ -77,7 +77,7 @@ if st.sidebar.button("🔎 Tampilkan Visualisasi"):
         st.warning("Parameter tidak dikenali.")
         st.stop()
 
-    # Area peta: Kalimantan Selatan (lat -4.5 s.d -1, lon 114 s.d 117)
+    # Area peta Kalimantan Selatan
     lat_min, lat_max = -4.5, -1
     lon_min, lon_max = 114, 117
     var = var.sel(lat=slice(lat_min, lat_max), lon=slice(lon_min, lon_max))
@@ -98,7 +98,7 @@ if st.sidebar.button("🔎 Tampilkan Visualisasi"):
     valid_str = valid_dt.strftime("%HUTC %a %d %b %Y")
     tstr = f"t+{forecast_hour:03d}"
 
-    # Judul peta
+    # Judul peta tengah
     font_size = max(10, int(fig_width * 1.2))
     judul_peta = f"{label} Valid {valid_str} — GFS {tstr}"
     ax.set_title(judul_peta, fontsize=font_size, fontweight="bold", loc="center", pad=10)
@@ -125,16 +125,24 @@ if st.sidebar.button("🔎 Tampilkan Visualisasi"):
     ax.add_feature(cfeature.BORDERS, linestyle=':')
     ax.add_feature(cfeature.LAND, facecolor='lightgray')
 
-    # Tambahkan titik lokasi kabupaten/kota
+    # Titik koordinat 13 kabupaten/kota di Kalimantan Selatan
     kota_lokasi = pd.DataFrame({
         "kota": [
-            "Banjarmasin", "Banjarbaru", "Martapura", "Pelaihari", "Kandangan",
-            "Barabai", "Tanjung", "Paringin", "Marabahan", "Rantau"
+            "Banjarmasin", "Banjarbaru", "Martapura (Banjar)", "Marabahan (Barito Kuala)",
+            "Kandangan (HSS)", "Barabai (HST)", "Amuntai (HSU)", "Kotabaru",
+            "Batulicin (Tanah Bumbu)", "Pelaihari (Tanah Laut)", "Tanjung (Tabalong)",
+            "Rantau (Tapin)", "Paringin (Balangan)"
         ],
-        "lat": [-3.319, -3.442, -3.410, -3.804, -2.716,
-                -2.583, -2.130, -2.590, -2.988, -2.918],
-        "lon": [114.590, 114.843, 114.904, 114.761, 115.176,
-                115.385, 115.435, 115.518, 114.733, 115.149]
+        "lat": [
+            -3.319, -3.442, -3.410, -2.988,
+            -2.716, -2.583, -2.416, -3.000,
+            -3.437, -3.804, -2.130, -2.918, -2.590
+        ],
+        "lon": [
+            114.590, 114.843, 114.904, 114.733,
+            115.176, 115.385, 115.150, 116.000,
+            115.825, 114.761, 115.435, 115.149, 115.518
+        ]
     })
 
     for _, row in kota_lokasi.iterrows():
@@ -143,5 +151,5 @@ if st.sidebar.button("🔎 Tampilkan Visualisasi"):
         ax.text(row['lon'] + 0.02, row['lat'] + 0.02, row['kota'], fontsize=7,
                 transform=ccrs.PlateCarree(), ha='left', va='bottom', color='black')
 
-    # Tampilkan di Streamlit
+    # Tampilkan hasil ke Streamlit
     st.pyplot(fig)
