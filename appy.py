@@ -10,7 +10,7 @@ st.set_page_config(page_title="Prakiraan Cuaca Wilayah Indonesia", layout="wide"
 
 st.title("📡 Global Forecast System Viewer (Realtime via NOMADS)")
 st.header("Web Hasil Pembelajaran Pengelolaan Informasi Meteorologi")
-st.subheader("UAS An.Ibnu Hidayat")
+st.subheader("Editor : Ibnu Hidayat (M8TB_14.24.0005")
 
 
 @st.cache_data
