@@ -6,7 +6,7 @@ import cartopy.feature as cfeature
 import pandas as pd
 from datetime import datetime, timedelta
 import io
-import imageio.v2 as imageio
+import imageio  # ✅ gunakan imageio biasa
 
 # Konfigurasi halaman
 st.set_page_config(page_title="Prakiraan Cuaca Wilayah Indonesia", layout="wide")
@@ -15,14 +15,12 @@ st.title("📡 Global Forecast System Viewer (Realtime via NOMADS)")
 st.header("Web Hasil Pembelajaran Pengelolaan Informasi Meteorologi")
 st.markdown("### **_Editor : Ibnu Hidayat (M8TB_14.24.0005)_**")
 
-# Fungsi load data GFS
 @st.cache_data
 def load_dataset(run_date, run_hour):
     base_url = f"https://nomads.ncep.noaa.gov/dods/gfs_0p25_1hr/gfs{run_date}/gfs_0p25_1hr_{run_hour}z"
     ds = xr.open_dataset(base_url)
     return ds
 
-# Sidebar
 st.sidebar.title("⚙️ Pengaturan")
 utc_now = datetime.utcnow()
 max_date = utc_now.date()
@@ -38,7 +36,6 @@ parameter = st.sidebar.selectbox("Parameter", [
     "Tekanan Permukaan Laut (prmslmsl)"
 ])
 
-# Fungsi bantu plotting titik kabupaten/kota
 def plot_kabupaten(ax):
     kota_lokasi = pd.DataFrame({
         "kota": [
@@ -52,14 +49,11 @@ def plot_kabupaten(ax):
         "lon": [114.590, 114.843, 114.904, 114.733, 115.176, 115.385, 115.150,
                 116.000, 115.825, 114.761, 115.435, 115.149, 115.518]
     })
-
     for _, row in kota_lokasi.iterrows():
-        ax.plot(row['lon'], row['lat'], marker='o', color='red', markersize=4,
-                transform=ccrs.PlateCarree())
+        ax.plot(row['lon'], row['lat'], marker='o', color='red', markersize=4, transform=ccrs.PlateCarree())
         ax.text(row['lon'] + 0.02, row['lat'] + 0.02, row['kota'], fontsize=7,
                 transform=ccrs.PlateCarree(), ha='left', va='bottom')
 
-# Tombol utama visualisasi
 if st.sidebar.button("🔎 Tampilkan Visualisasi"):
     try:
         with st.spinner("Mengunduh dan memuat data dari server GFS..."):
@@ -68,7 +62,6 @@ if st.sidebar.button("🔎 Tampilkan Visualisasi"):
         st.error(f"Gagal memuat data: {e}")
         st.stop()
 
-    # Parameter
     is_vector = False
     if "pratesfc" in parameter:
         var = ds["pratesfc"][forecast_hour, :, :] * 3600
@@ -83,11 +76,10 @@ if st.sidebar.button("🔎 Tampilkan Visualisasi"):
     elif "ugrd10m" in parameter:
         u = ds["ugrd10m"][forecast_hour, :, :]
         v = ds["vgrd10m"][forecast_hour, :, :]
-        speed = (u**2 + v**2)**0.5 * 1.94384
-        var = speed
-        is_vector = True
+        var = ((u**2 + v**2)**0.5) * 1.94384
         label = "Kecepatan Angin (knot)"
         cmap = "RdYlGn_r"
+        is_vector = True
         vmin, vmax = 0, 40
     elif "prmsl" in parameter:
         var = ds["prmslmsl"][forecast_hour, :, :] / 100
@@ -102,17 +94,13 @@ if st.sidebar.button("🔎 Tampilkan Visualisasi"):
         u = u.sel(lat=slice(lat_min, lat_max), lon=slice(lon_min, lon_max))
         v = v.sel(lat=slice(lat_min, lat_max), lon=slice(lon_min, lon_max))
 
-    # Plot
     fig = plt.figure(figsize=(10, 6))
     ax = plt.axes(projection=ccrs.PlateCarree())
     ax.set_extent([lon_min, lon_max, lat_min, lat_max])
-
     valid_time = pd.to_datetime(str(ds.time[forecast_hour].values))
-    ax.set_title(f"{label} Valid {valid_time:%HUTC %a %d %b %Y}",
-                 fontsize=12, fontweight="bold", pad=10)
+    ax.set_title(f"{label} Valid {valid_time:%HUTC %a %d %b %Y}", fontsize=12, pad=10)
 
-    im = ax.pcolormesh(var.lon, var.lat, var.values, cmap=cmap, vmin=vmin, vmax=vmax,
-                       transform=ccrs.PlateCarree())
+    im = ax.pcolormesh(var.lon, var.lat, var.values, cmap=cmap, vmin=vmin, vmax=vmax, transform=ccrs.PlateCarree())
     if is_vector:
         ax.quiver(var.lon[::5], var.lat[::5], u.values[::5, ::5], v.values[::5, ::5],
                   transform=ccrs.PlateCarree(), scale=700, width=0.002, color='black')
@@ -120,22 +108,16 @@ if st.sidebar.button("🔎 Tampilkan Visualisasi"):
     ax.coastlines(resolution='10m', linewidth=0.8)
     ax.add_feature(cfeature.BORDERS, linestyle=':')
     ax.add_feature(cfeature.LAND, facecolor='lightgray')
-
     plot_kabupaten(ax)
     cbar = plt.colorbar(im, ax=ax, orientation='vertical', pad=0.02)
     cbar.set_label(label)
-
     st.pyplot(fig)
-    st.caption("📍 Titik merah: Ibu kota 13 kabupaten/kota di Kalimantan Selatan")
-
-    # Unduh gambar
     buf = io.BytesIO()
     fig.savefig(buf, format="png", dpi=150, bbox_inches='tight')
     buf.seek(0)
     filename = f"gfs_{parameter.replace(' ', '_')}_{forecast_hour:03d}.png"
     st.download_button("📥 Unduh Gambar Peta", data=buf, file_name=filename, mime="image/png")
 
-# Tombol untuk animasi
 if st.sidebar.button("🎞️ Buat Animasi"):
     try:
         with st.spinner("Membuat animasi GIF..."):
@@ -165,6 +147,8 @@ if st.sidebar.button("🎞️ Buat Animasi"):
                     cmap = "cool"
                     vmin, vmax = 980, 1020
 
+                lat_min, lat_max = -4.5, -1
+                lon_min, lon_max = 114, 117
                 var = var.sel(lat=slice(lat_min, lat_max), lon=slice(lon_min, lon_max))
                 if "ugrd10m" in parameter:
                     u = u.sel(lat=slice(lat_min, lat_max), lon=slice(lon_min, lon_max))
@@ -173,7 +157,6 @@ if st.sidebar.button("🎞️ Buat Animasi"):
                 fig = plt.figure(figsize=(7, 4.5))
                 ax = plt.axes(projection=ccrs.PlateCarree())
                 ax.set_extent([lon_min, lon_max, lat_min, lat_max])
-
                 time_str = pd.to_datetime(str(ds.time[fh].values)).strftime("%d %b %HUTC")
                 ax.set_title(f"{label} • Valid {time_str} • t+{fh:03d}", fontsize=10, pad=6)
 
