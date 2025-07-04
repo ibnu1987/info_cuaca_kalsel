@@ -17,7 +17,7 @@ st.title("📡 Global Forecast System Viewer (Realtime via NOMADS)")
 st.header("Web Hasil Pembelajaran Pengelolaan Informasi Meteorologi")
 st.markdown("### **_Editor : Ibnu Hidayat (M8TB_14.24.0005)_**")
 
-# Cek apakah dataset tersedia
+# Fungsi memeriksa ketersediaan dataset
 def check_url(url):
     try:
         with closing(urllib.request.urlopen(url, timeout=5)) as conn:
@@ -25,7 +25,7 @@ def check_url(url):
     except:
         return False
 
-# Load dataset
+# Fungsi untuk memuat dataset
 @st.cache_data
 def load_dataset(run_date, run_hour):
     base_url = f"https://nomads.ncep.noaa.gov/dods/gfs_0p25_1hr/gfs{run_date}/gfs_0p25_1hr_{run_hour}z"
@@ -45,7 +45,7 @@ parameter = st.sidebar.selectbox("Parameter", [
     "Tekanan Permukaan Laut (prmslmsl)"
 ])
 
-# Tombol proses
+# Tombol tampilkan
 if st.sidebar.button("🔎 Tampilkan Visualisasi"):
     base_url = f"https://nomads.ncep.noaa.gov/dods/gfs_0p25_1hr/gfs{run_date.strftime('%Y%m%d')}/gfs_0p25_1hr_{run_hour}z"
     if not check_url(base_url):
@@ -92,7 +92,7 @@ if st.sidebar.button("🔎 Tampilkan Visualisasi"):
         st.warning("Parameter tidak dikenali.")
         st.stop()
 
-    # Area Kalimantan Selatan
+    # Batas wilayah Kalimantan Selatan
     lat_min, lat_max = -4.5, -1
     lon_min, lon_max = 114, 117
     var = var.sel(lat=slice(lat_min, lat_max), lon=slice(lon_min, lon_max))
@@ -100,18 +100,15 @@ if st.sidebar.button("🔎 Tampilkan Visualisasi"):
         u = u.sel(lat=slice(lat_min, lat_max), lon=slice(lon_min, lon_max))
         v = v.sel(lat=slice(lat_min, lat_max), lon=slice(lon_min, lon_max))
 
-    # Plot
+    # Buat figure
     fig, ax = plt.subplots(figsize=(10, 6), subplot_kw={'projection': ccrs.PlateCarree()})
     ax.set_extent([lon_min, lon_max, lat_min, lat_max], crs=ccrs.PlateCarree())
 
-    # Judul pendek + font dinamis
+    # Judul peta
     valid_time = ds.time[forecast_hour].values
     valid_dt = pd.to_datetime(str(valid_time))
-    valid_str = valid_dt.strftime("%d %b %Y %HUTC")
-    judul = f"{label} - GFS t+{forecast_hour:03d} ({valid_str})"
-    fig_width = fig.get_size_inches()[0]
-    font_size = min(14, max(9, int(fig_width * 1.1)))
-    ax.set_title(judul, fontsize=font_size, weight='bold', loc='center', pad=10)
+    valid_str = valid_dt.strftime("%HUTC %a %d %b %Y")
+    ax.set_title(f"{label} Valid {valid_str} — GFS t+{forecast_hour:03d}", fontsize=12, weight='bold')
 
     # Plot data
     if is_contour:
@@ -120,3 +117,43 @@ if st.sidebar.button("🔎 Tampilkan Visualisasi"):
     else:
         im = ax.pcolormesh(var.lon, var.lat, var.values, cmap=cmap, vmin=vmin, vmax=vmax)
         cbar = plt.colorbar(im, ax=ax, orientation='vertical', pad=0.02)
+        cbar.set_label(label)
+
+        if is_vector:
+            ax.quiver(var.lon[::5], var.lat[::5], u.values[::5, ::5], v.values[::5, ::5],
+                      scale=700, width=0.002, color='black')
+
+    # Fitur peta
+    ax.coastlines(resolution='10m')
+    ax.add_feature(cfeature.BORDERS, linestyle=':')
+    ax.add_feature(cfeature.LAND, facecolor='lightgray')
+
+    # Titik koordinat kabupaten/kota
+    kota_lokasi = pd.DataFrame({
+        "kota": [
+            "Kota Banjarmasin", "Kota Banjarbaru", "Kab. Banjar", "Kab. Barito Kuala",
+            "Kab. Hulu Sungai Selatan", "Kab. Hulu Sungai Tengah", "Kab. Hulu Sungai Utara",
+            "Kab. Kotabaru", "Kab. Tanah Bumbu", "Kab. Tanah Laut", "Kab. Tabalong",
+            "Kab. Tapin", "Kab. Balangan"
+        ],
+        "lat": [-3.319, -3.442, -3.410, -2.988, -2.716, -2.583, -2.416,
+                -3.000, -3.437, -3.804, -2.130, -2.918, -2.590],
+        "lon": [114.590, 114.843, 114.904, 114.733, 115.176, 115.385, 115.150,
+                116.000, 115.825, 114.761, 115.435, 115.149, 115.518]
+    })
+
+    for _, row in kota_lokasi.iterrows():
+        ax.plot(row['lon'], row['lat'], marker='o', color='red', markersize=4, transform=ccrs.PlateCarree())
+        ax.text(row['lon'] + 0.02, row['lat'] + 0.02, row['kota'], fontsize=6,
+                transform=ccrs.PlateCarree(), ha='left', va='bottom')
+
+    # Tampilkan ke Streamlit
+    st.pyplot(fig)
+
+    # Unduh sebagai PNG
+    buf = BytesIO()
+    fig.savefig(buf, format="png", bbox_inches="tight")
+    st.download_button("📥 Unduh Gambar", data=buf.getvalue(), file_name="cuaca_kalsel_gfs.png", mime="image/png")
+
+    # Sumber data
+    st.caption("Sumber data: NOAA GFS via NOMADS (https://nomads.ncep.noaa.gov)")
