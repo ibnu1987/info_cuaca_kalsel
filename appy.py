@@ -66,7 +66,7 @@ if st.sidebar.button("🔎 Tampilkan Visualisasi"):
     if "pratesfc" in parameter:
         var = ds["pratesfc"][forecast_hour, :, :] * 3600
         label = "Curah Hujan (mm/jam)"
-        cmap = "Blues"
+        cmap = "YlGnBu"
         vmin, vmax = 0, 50
     elif "tmp2m" in parameter:
         var = ds["tmp2m"][forecast_hour, :, :] - 273.15
@@ -131,10 +131,10 @@ if st.sidebar.button("🔎 Tampilkan Visualisasi"):
     # Titik koordinat kabupaten/kota
     kota_lokasi = pd.DataFrame({
         "kota": [
-            "Kota Banjarmasin", "Kota Banjarbaru", "Kab. Banjar", "Kab. Barito Kuala",
-            "Kab. Hulu Sungai Selatan", "Kab. Hulu Sungai Tengah", "Kab. Hulu Sungai Utara",
-            "Kab. Kotabaru", "Kab. Tanah Bumbu", "Kab. Tanah Laut", "Kab. Tabalong",
-            "Kab. Tapin", "Kab. Balangan"
+            "Kota Banjarmasin", "Kota Banjarbaru", "Kab.Banjar", "Kab.Barito Kuala",
+            "Kab.HSS", "Kab.HST", "Kab.HSU",
+            "Kab.Kotabaru", "Kab.Tanah Bumbu", "Kab.Tanah Laut", "Kab.Tabalong",
+            "Kab.Tapin", "Kab.Balangan"
         ],
         "lat": [-3.319, -3.442, -3.410, -2.988, -2.716, -2.583, -2.416,
                 -3.000, -3.437, -3.804, -2.130, -2.918, -2.590],
