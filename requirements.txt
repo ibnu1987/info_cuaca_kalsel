@@ -7,3 +7,6 @@ cartopy
 pandas
 folium
 streamlit-folium
+io
+imageio
+datetime
