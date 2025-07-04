@@ -13,7 +13,7 @@ from contextlib import closing
 st.set_page_config(page_title="Prakiraan Cuaca Wilayah Indonesia", layout="wide")
 
 # Judul aplikasi
-st.title("📡 Global Forecast System Viewer Wilayah kalimantan Selatan (Realtime via NOMADS)")
+st.title("📡 Global Forecast System Viewer Wilayah Kal-Sel (Realtime via NOMADS)")
 st.header("Web Hasil Pembelajaran Pengelolaan Informasi Meteorologi")
 st.markdown("### **_Editor : Ibnu Hidayat (M8TB_14.24.0005)_**")
 
